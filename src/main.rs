@@ -1,5 +1,6 @@
 #![allow(clippy::type_complexity)]
 use bevy::prelude::*;
+use bevy::winit::WinitConfig;
 
 #[derive(Component, Default)]
 struct Velocity(Vec3);
@@ -47,7 +48,7 @@ fn body_gravities(
             }
         }
 
-        vel.0 += force * time.delta_seconds();
+        vel.0 += force * time.delta_seconds() / body.mass;
     }
 }
 
@@ -57,7 +58,7 @@ fn body_movement(
     mut query: Query<(&Velocity, &mut Transform)>,
 ) {
     for (vel, mut tf) in query.iter_mut() {
-        tf.translation += time.delta_seconds() * vel.0;
+        tf.translation += time.delta_seconds() * vel.0 * 0.1;
         // println!("Body position: {}", tf.translation);
     }
 }
@@ -126,20 +127,56 @@ fn setup_bodies_planets(
 }
 
 fn setup(mut commands: Commands) {
-    let sun = commands
-        .spawn()
-        .insert(Star { color: Color::rgb(1.0, 0.2, 0.0), luminosity: 1000.0, radius: 1.0 })
+    // let mut star2 = commands.spawn();
+    // let mut star1 = commands.spawn();
+    // let mut earth = commands.spawn();
+    // let mut jupiter = commands.spawn();
+    // let mut pluto = commands.spawn();
+
+    let star1_id = commands.spawn()
+        .insert(Star { color: Color::rgb(1.0, 0.3, 0.0), luminosity: 1000.0, radius: 0.4 })
         .insert(Body { mass: 100.0 })
-        .insert(Velocity(Vec3::ZERO))
-        .insert(Gravity { affectors: vec![] }) // nothing affects the sun
+        .insert(Velocity(5.0 * Vec3::Z))
+        // .insert(Gravity { affectors: vec![] })
+        .insert(Transform::from_xyz(-1.0, 0.0, 0.0))
         .id();
 
+    let star2_id = commands.spawn()
+        .insert(Star { color: Color::rgb(1.0, 0.1, 0.0), luminosity: 600.0, radius: 0.2 })
+        .insert(Body { mass: 50.0 })
+        .insert(Velocity(-10.0 * Vec3::Z))
+        .insert(Gravity { affectors: vec![star1_id] })
+        .insert(Transform::from_xyz(1.0, 0.0, 0.0))
+        .id();
+
+    // the earth
     commands.spawn()
-        .insert(Body { mass: 0.1 })
+        .insert(Body { mass: 1.0 })
+        .insert(Velocity(5.0 * Vec3::Z))
+        .insert(Planet { color: Color::BLUE, radius: 0.02 })
+        .insert(Gravity { affectors: vec![star1_id, star2_id] })
+        .insert(Transform::from_xyz(2.0, 0.0, 0.0))
+        .id();
+
+    // jupiter
+    commands.spawn()
+        .insert(Body { mass: 10.0 })
         .insert(Velocity(8.0 * Vec3::Z))
-        .insert(Planet { color: Color::BLUE, radius: 0.2 })
-        .insert(Gravity { affectors: vec![sun] })
+        .insert(Planet { color: Color::ORANGE, radius: 0.04 })
+        .insert(Gravity { affectors: vec![star1_id, star2_id] })
         .insert(Transform::from_xyz(2.0, 0.0, 0.0));
+
+    // pluto
+    commands.spawn()
+        .insert(Body { mass: 0.01 })
+        .insert(Velocity(8.0 * Vec3::Z))
+        .insert(Planet { color: Color::GRAY, radius: 0.01 })
+        .insert(Gravity { affectors: vec![star1_id, star2_id] })
+        .insert(Transform::from_xyz(2.0, 0.0, 0.0));
+
+    commands.entity(star1_id)
+        .insert(Gravity { affectors: vec![star2_id] });
+
 
     // // light
     // commands.spawn_bundle(PointLightBundle {
@@ -193,6 +230,7 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
+        // .add_plugin(bevy_framepace::FramepacePlugin::default())
         .add_startup_system(setup)
         .add_system(camera_wasd)
 
