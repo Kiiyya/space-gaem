@@ -31,13 +31,14 @@ struct Gravity {
 fn body_gravities(
     time: Res<Time>,
     mut query: Query<(&Body, &Gravity, &mut Velocity, &Transform)>,
+    query_affectors: Query<(&Body, &Transform)>,
 ) {
-    for (body, grav, vel, tf) in query.iter() {
+    for (body, grav, mut vel, tf) in query.iter_mut() {
         let mut force = Vec3::ZERO;
 
         // collect the force exerted on this entity by any entity in our affectors.
         for ent in grav.affectors.iter() {
-            if let Ok((body2, _, _, tf2)) = query.get(*ent) {
+            if let Ok((body2, tf2)) = query_affectors.get(*ent) {
                 let dist = tf2.translation - tf.translation;
                 if let Some(dist) = dist.try_normalize() {
                     let magnitude = body.mass * body2.mass / dist.length_squared();
@@ -57,7 +58,7 @@ fn body_movement(
 ) {
     for (vel, mut tf) in query.iter_mut() {
         tf.translation += time.delta_seconds() * vel.0;
-        println!("Body position: {}", tf.translation);
+        // println!("Body position: {}", tf.translation);
     }
 }
 
@@ -130,14 +131,14 @@ fn setup(mut commands: Commands) {
     let sun = commands
         .spawn()
         .insert(Star { color: Color::YELLOW, luminosity: 1000.0, radius: 1.0 })
-        .insert(Body { mass: 1.0 })
+        .insert(Body { mass: 100.0 })
         .insert(Velocity(Vec3::ZERO))
         .insert(Gravity { affectors: vec![] }) // nothing affects the sun
         .id();
 
     commands.spawn()
         .insert(Body { mass: 0.1 })
-        .insert(Velocity(1.2 * Vec3::Z))
+        .insert(Velocity(8.0 * Vec3::Z))
         .insert(Planet { color: Color::BLUE, radius: 0.2 })
         .insert(Gravity { affectors: vec![sun] })
         .insert(Transform::from_xyz(2.0, 0.0, 0.0));
