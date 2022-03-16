@@ -74,6 +74,9 @@ fn setup_bodies_stars(
         let sphere_handle = meshes.add(Mesh::from(shape::Icosphere{ radius: star.radius, ..Default::default() }));
         let mat_handle = materials.add(StandardMaterial {
             base_color: star.color,
+            emissive: star.color,
+            perceptual_roughness: 1.0,
+            reflectance: 0.0,
             ..Default::default()
         });
         commands.entity(ent)
@@ -88,6 +91,7 @@ fn setup_bodies_stars(
                     intensity: star.luminosity,
                     color: star.color,
                     shadows_enabled: true,
+                    radius: star.radius,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -106,6 +110,9 @@ fn setup_bodies_planets(
         let sphere_handle = meshes.add(Mesh::from(shape::Icosphere{ radius: planet.radius, ..Default::default() }));
         let mat_handle = materials.add(StandardMaterial {
             base_color: planet.color,
+            metallic: 0.1,
+            reflectance: 0.3,
+            perceptual_roughness: 0.7,
             ..Default::default()
         });
 
@@ -118,19 +125,10 @@ fn setup_bodies_planets(
     }
 }
 
-// fn orbits(
-//     time: Res<Time>,
-//     mut query: Query<(&Body, &mut Transform, &Rotating)>,
-// ) {
-//     for (_body, mut tf, rot) in query.iter_mut() {
-//         tf.rotate(Quat::from_rotation_y(time.delta_seconds() * rot.period * 6.0));
-//     }
-// }
-
 fn setup(mut commands: Commands) {
     let sun = commands
         .spawn()
-        .insert(Star { color: Color::YELLOW, luminosity: 1000.0, radius: 1.0 })
+        .insert(Star { color: Color::rgb(1.0, 0.2, 0.0), luminosity: 1000.0, radius: 1.0 })
         .insert(Body { mass: 100.0 })
         .insert(Velocity(Vec3::ZERO))
         .insert(Gravity { affectors: vec![] }) // nothing affects the sun
@@ -143,15 +141,15 @@ fn setup(mut commands: Commands) {
         .insert(Gravity { affectors: vec![sun] })
         .insert(Transform::from_xyz(2.0, 0.0, 0.0));
 
-    // light
-    commands.spawn_bundle(PointLightBundle {
-        transform: Transform::from_xyz(0.0, 5.0, 0.0),
-        point_light: PointLight {
-            intensity: 100.0,
-            ..Default::default()
-        },
-        ..Default::default()
-    });
+    // // light
+    // commands.spawn_bundle(PointLightBundle {
+    //     transform: Transform::from_xyz(0.0, 5.0, 0.0),
+    //     point_light: PointLight {
+    //         intensity: 100.0,
+    //         ..Default::default()
+    //     },
+    //     ..Default::default()
+    // });
 
     // camera
     commands.spawn_bundle(PerspectiveCameraBundle {
