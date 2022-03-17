@@ -8,3 +8,5 @@ edition = "2021"
 [dependencies]
 bevy = "0.6.1"
 bevy_framepace = "*"
+bevy_config_cam = { version = "0.2.0" }
+rand = "*"

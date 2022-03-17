@@ -1,5 +1,9 @@
 #![allow(clippy::type_complexity)]
 use bevy::prelude::*;
+use player::{PlayerPlugin, Player};
+use rand::Rng;
+
+mod player;
 
 #[derive(Component, Default)]
 struct Velocity(Vec3);
@@ -13,6 +17,12 @@ struct Body {
 struct Star {
     color: Color,
     luminosity: f32,
+    radius: f32,
+}
+
+#[derive(Component)]
+struct FarStar {
+    color: Color,
     radius: f32,
 }
 
@@ -71,7 +81,7 @@ fn setup_bodies_stars(
 ) {
     for (ent, star, tf) in query.iter() {
 		// let sphere_handle = meshes.add(Mesh::from(shape::Cube { size: star.radius }));
-        let sphere_handle = meshes.add(Mesh::from(shape::Icosphere{ radius: star.radius, ..Default::default() }));
+        let sphere_handle = meshes.add(Mesh::from(shape::Icosphere{ radius: star.radius, subdivisions: 5 }));
         let mat_handle = materials.add(StandardMaterial {
             base_color: star.color,
             emissive: star.color,
@@ -86,15 +96,41 @@ fn setup_bodies_stars(
                 ..Default::default()
             })
             .insert_bundle(PointLightBundle {
-            transform: tf.copied().unwrap_or_default(),
+                transform: tf.copied().unwrap_or_default(),
                 point_light: PointLight {
                     intensity: star.luminosity,
                     color: star.color,
                     shadows_enabled: true,
                     radius: star.radius,
-                    range: 1000000.0,
+                    range: 100000000.0,
                     ..Default::default()
                 },
+                ..Default::default()
+            });
+    }
+}
+
+fn setup_bodies_far_stars(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    query: Query<(Entity, &FarStar, Option<&Transform>), Added<FarStar>>,
+) {
+    for (ent, star, tf) in query.iter() {
+		// let sphere_handle = meshes.add(Mesh::from(shape::Cube { size: star.radius }));
+        let sphere_handle = meshes.add(Mesh::from(shape::Icosphere{ radius: star.radius, subdivisions: 0 }));
+        let mat_handle = materials.add(StandardMaterial {
+            base_color: star.color,
+            emissive: star.color,
+            perceptual_roughness: 1.0,
+            reflectance: 0.0,
+            ..Default::default()
+        });
+        commands.entity(ent)
+            .insert_bundle(PbrBundle {
+                mesh: sphere_handle,
+                material: mat_handle,
+                transform: tf.copied().unwrap_or_default(),
                 ..Default::default()
             });
     }
@@ -127,11 +163,8 @@ fn setup_bodies_planets(
 }
 
 fn setup(mut commands: Commands) {
-    // let mut star2 = commands.spawn();
-    // let mut star1 = commands.spawn();
-    // let mut earth = commands.spawn();
-    // let mut jupiter = commands.spawn();
-    // let mut pluto = commands.spawn();
+
+
 
     let star1_id = commands.spawn()
         .insert(Star { color: Color::rgb(1.0, 0.3, 0.0), luminosity: 100000.0, radius: 6.0 })
@@ -168,20 +201,22 @@ fn setup(mut commands: Commands) {
         .id();
 
     // juptiter moon
-    commands.spawn()
-        .insert(Body { mass: 1.0 })
+    let jupiter_moon_id = commands.spawn()
+        .insert(Body { mass: 0.3 })
         .insert(Velocity(43.0 * Vec3::Z))
         .insert(Planet {color: Color::CYAN, radius: 1.0 })
         .insert(Gravity { affectors: vec![star1_id, star2_id, jupiter_id]})
-        .insert(Transform::from_xyz(104.0, 0.0, 0.0));
+        .insert(Transform::from_xyz(104.0, 0.0, 0.0))
+        .id();
 
     // pluto
-    commands.spawn()
+    let pluto_id = commands.spawn()
         .insert(Body { mass: 0.01 })
         .insert(Velocity(10.0 * Vec3::Z))
         .insert(Planet { color: Color::GRAY, radius: 1.0 })
         .insert(Gravity { affectors: vec![star1_id, star2_id] })
-        .insert(Transform::from_xyz(150.0, 0.0, 0.0));
+        .insert(Transform::from_xyz(150.0, 0.0, 0.0))
+        .id();
 
     commands.entity(star1_id)
         .insert(Gravity { affectors: vec![star2_id] });
@@ -197,40 +232,36 @@ fn setup(mut commands: Commands) {
     //     ..Default::default()
     // });
 
-    // camera
-    commands.spawn_bundle(PerspectiveCameraBundle {
-        transform: Transform::from_xyz(0.0, 300.0, 0.0).looking_at(Vec3::ZERO, Vec3::Z),
-        ..Default::default()
-    });
+    let mut rng = rand::thread_rng();
+
+    for _ in 0..5000 {
+        commands.spawn()
+            .insert(FarStar { color: Color::WHITE, radius: 2.0 })
+            .insert(Transform::from_xyz(
+                gen_sign() * rng.gen_range(100.0 .. 500.0),
+                gen_sign() * rng.gen_range(100.0 .. 500.0),
+                gen_sign() * rng.gen_range(100.0 .. 500.0),
+            ));
+    }
+
+    // Player & Camera
+    commands
+		.spawn_bundle(PerspectiveCameraBundle {
+			transform: Transform::from_xyz(94.0, 0.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+			..Default::default()
+		})
+		.insert(Player)
+        .insert(Velocity(35.0 * Vec3::Z))
+        .insert(Body { mass: 0.0000001 })
+		.insert(Gravity { affectors: vec![star1_id, star2_id, earth_id, jupiter_id, jupiter_moon_id, pluto_id] });
 }
 
-fn camera_wasd(
-    input: Res<Input<KeyCode>>,
-    mut cam: Query<(&mut Transform, &PerspectiveProjection)>,
-    time: Res<Time>,
-) {
-    let mut dir = Vec3::ZERO;
-    let w = input.pressed(KeyCode::W);
-    let a = input.pressed(KeyCode::A);
-    let s = input.pressed(KeyCode::S);
-    let d = input.pressed(KeyCode::D);
-    if (w != s) || (a != d) {
-        match (w, s) {
-            (true, false) => dir += Vec3::Z,
-            (false, true) => dir -= Vec3::Z,
-            _ => (),
-        }
-        match (a, d) {
-            (true, false) => dir += Vec3::X,
-            (false, true) => dir -= Vec3::X,
-            _ => (),
-        }
-
-        let motion = dir.normalize() * time.delta_seconds() * 3.0;
-
-        for (mut tf, _) in cam.iter_mut() {
-            tf.translation += motion;
-        }
+fn gen_sign() -> f32 {
+    let mut rng = rand::thread_rng();
+    if rng.gen() {
+        -1.0
+    } else {
+        1.0
     }
 }
 
@@ -239,13 +270,20 @@ fn main() {
         .insert_resource(Msaa { samples: 4 })
         .insert_resource(ClearColor(Color::BLACK))
         .add_plugins(DefaultPlugins)
-        // .add_plugin(bevy_framepace::FramepacePlugin::default())
+        .add_plugin(PlayerPlugin)
+
+        // .add_plugin(ConfigCam)
+        // .insert_resource(MovementSettings { dist: 5.0, ..Default::default() })
+        // .insert_resource(PlayerSettings {
+        //     pos: Vec3::new(0.0, 300.0, 0.0),
+        // })
+
         .add_startup_system(setup)
-        .add_system(camera_wasd)
 
         // .add_system(orbits)
         .add_system(setup_bodies_planets)
         .add_system(setup_bodies_stars)
+        .add_system(setup_bodies_far_stars)
         .add_system(body_movement)
         .add_system(body_gravities)
 
