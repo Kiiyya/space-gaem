@@ -1,6 +1,5 @@
 #![allow(clippy::type_complexity)]
 use bevy::prelude::*;
-use bevy::winit::WinitConfig;
 
 #[derive(Component, Default)]
 struct Velocity(Vec3);
@@ -48,7 +47,7 @@ fn body_gravities(
             }
         }
 
-        vel.0 += force * time.delta_seconds() / body.mass;
+        vel.0 += 0.1 * force * time.delta_seconds() / body.mass;
     }
 }
 
@@ -58,7 +57,7 @@ fn body_movement(
     mut query: Query<(&Velocity, &mut Transform)>,
 ) {
     for (vel, mut tf) in query.iter_mut() {
-        tf.translation += time.delta_seconds() * vel.0 * 0.1;
+        tf.translation += time.delta_seconds() * vel.0;
         // println!("Body position: {}", tf.translation);
     }
 }
@@ -93,6 +92,7 @@ fn setup_bodies_stars(
                     color: star.color,
                     shadows_enabled: true,
                     radius: star.radius,
+                    range: 1000000.0,
                     ..Default::default()
                 },
                 ..Default::default()
@@ -134,45 +134,54 @@ fn setup(mut commands: Commands) {
     // let mut pluto = commands.spawn();
 
     let star1_id = commands.spawn()
-        .insert(Star { color: Color::rgb(1.0, 0.3, 0.0), luminosity: 1000.0, radius: 0.4 })
+        .insert(Star { color: Color::rgb(1.0, 0.3, 0.0), luminosity: 100000.0, radius: 6.0 })
         .insert(Body { mass: 100.0 })
         .insert(Velocity(5.0 * Vec3::Z))
         // .insert(Gravity { affectors: vec![] })
-        .insert(Transform::from_xyz(-1.0, 0.0, 0.0))
+        .insert(Transform::from_xyz(-10.0, 0.0, 0.0))
         .id();
 
     let star2_id = commands.spawn()
-        .insert(Star { color: Color::rgb(1.0, 0.1, 0.0), luminosity: 600.0, radius: 0.2 })
+        .insert(Star { color: Color::rgb(1.0, 0.1, 0.0), luminosity: 60000.0, radius: 4.0 })
         .insert(Body { mass: 50.0 })
         .insert(Velocity(-10.0 * Vec3::Z))
         .insert(Gravity { affectors: vec![star1_id] })
-        .insert(Transform::from_xyz(1.0, 0.0, 0.0))
+        .insert(Transform::from_xyz(10.0, 0.0, 0.0))
         .id();
 
     // the earth
-    commands.spawn()
-        .insert(Body { mass: 1.0 })
-        .insert(Velocity(5.0 * Vec3::Z))
-        .insert(Planet { color: Color::BLUE, radius: 0.02 })
+    let earth_id = commands.spawn()
+        .insert(Body { mass: 4.0 })
+        .insert(Velocity(40.0 * Vec3::Z))
+        .insert(Planet { color: Color::BLUE, radius: 1.5 })
         .insert(Gravity { affectors: vec![star1_id, star2_id] })
-        .insert(Transform::from_xyz(2.0, 0.0, 0.0))
+        .insert(Transform::from_xyz(50.0, 0.0, 0.0))
         .id();
 
     // jupiter
-    commands.spawn()
-        .insert(Body { mass: 10.0 })
-        .insert(Velocity(8.0 * Vec3::Z))
-        .insert(Planet { color: Color::ORANGE, radius: 0.04 })
+    let jupiter_id = commands.spawn()
+        .insert(Body { mass: 15.0 })
+        .insert(Velocity(40.0 * Vec3::Z))
+        .insert(Planet { color: Color::ORANGE, radius: 2.0 })
         .insert(Gravity { affectors: vec![star1_id, star2_id] })
-        .insert(Transform::from_xyz(2.0, 0.0, 0.0));
+        .insert(Transform::from_xyz(100.0, 0.0, 0.0))
+        .id();
+
+    // juptiter moon
+    commands.spawn()
+        .insert(Body { mass: 1.0 })
+        .insert(Velocity(43.0 * Vec3::Z))
+        .insert(Planet {color: Color::CYAN, radius: 1.0 })
+        .insert(Gravity { affectors: vec![star1_id, star2_id, jupiter_id]})
+        .insert(Transform::from_xyz(104.0, 0.0, 0.0));
 
     // pluto
     commands.spawn()
         .insert(Body { mass: 0.01 })
-        .insert(Velocity(8.0 * Vec3::Z))
-        .insert(Planet { color: Color::GRAY, radius: 0.01 })
+        .insert(Velocity(10.0 * Vec3::Z))
+        .insert(Planet { color: Color::GRAY, radius: 1.0 })
         .insert(Gravity { affectors: vec![star1_id, star2_id] })
-        .insert(Transform::from_xyz(2.0, 0.0, 0.0));
+        .insert(Transform::from_xyz(150.0, 0.0, 0.0));
 
     commands.entity(star1_id)
         .insert(Gravity { affectors: vec![star2_id] });
@@ -190,7 +199,7 @@ fn setup(mut commands: Commands) {
 
     // camera
     commands.spawn_bundle(PerspectiveCameraBundle {
-        transform: Transform::from_xyz(0.0, 10.0, 0.0).looking_at(Vec3::ZERO, Vec3::Z),
+        transform: Transform::from_xyz(0.0, 300.0, 0.0).looking_at(Vec3::ZERO, Vec3::Z),
         ..Default::default()
     });
 }
