@@ -1,5 +1,8 @@
 #![allow(clippy::type_complexity)]
+use std::f32::consts::PI;
+
 use bevy::prelude::*;
+use bevy::render::primitives::Frustum;
 use player::{PlayerPlugin, Player};
 use rand::Rng;
 
@@ -163,9 +166,6 @@ fn setup_bodies_planets(
 }
 
 fn setup(mut commands: Commands) {
-
-
-
     let star1_id = commands.spawn()
         .insert(Star { color: Color::rgb(1.0, 0.3, 0.0), luminosity: 100000.0, radius: 6.0 })
         .insert(Body { mass: 100.0 })
@@ -221,33 +221,30 @@ fn setup(mut commands: Commands) {
     commands.entity(star1_id)
         .insert(Gravity { affectors: vec![star2_id] });
 
-
-    // // light
-    // commands.spawn_bundle(PointLightBundle {
-    //     transform: Transform::from_xyz(0.0, 5.0, 0.0),
-    //     point_light: PointLight {
-    //         intensity: 100.0,
-    //         ..Default::default()
-    //     },
-    //     ..Default::default()
-    // });
-
     let mut rng = rand::thread_rng();
 
     for _ in 0..5000 {
+        let dir = Vec3::new(
+            rng.gen_range(-1.0 .. 1.0),
+            rng.gen_range(-1.0 .. 1.0),
+            rng.gen_range(-1.0 .. 1.0)
+        ).normalize();
+        let distance = rng.gen_range(3000.0 .. 10000.0);
+        let pos = distance * dir;
+
         commands.spawn()
-            .insert(FarStar { color: Color::WHITE, radius: 2.0 })
-            .insert(Transform::from_xyz(
-                gen_sign() * rng.gen_range(100.0 .. 500.0),
-                gen_sign() * rng.gen_range(100.0 .. 500.0),
-                gen_sign() * rng.gen_range(100.0 .. 500.0),
-            ));
+            .insert(FarStar { color: Color::WHITE, radius: rng.gen_range(1.0 .. 4.0) })
+            .insert(Transform::from_translation(pos));
     }
 
     // Player & Camera
     commands
 		.spawn_bundle(PerspectiveCameraBundle {
 			transform: Transform::from_xyz(94.0, 0.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
+            perspective_projection: PerspectiveProjection {
+                far: 1000000.0,
+                ..Default::default()
+            },
 			..Default::default()
 		})
 		.insert(Player)
@@ -272,15 +269,8 @@ fn main() {
         .add_plugins(DefaultPlugins)
         .add_plugin(PlayerPlugin)
 
-        // .add_plugin(ConfigCam)
-        // .insert_resource(MovementSettings { dist: 5.0, ..Default::default() })
-        // .insert_resource(PlayerSettings {
-        //     pos: Vec3::new(0.0, 300.0, 0.0),
-        // })
-
         .add_startup_system(setup)
 
-        // .add_system(orbits)
         .add_system(setup_bodies_planets)
         .add_system(setup_bodies_stars)
         .add_system(setup_bodies_far_stars)
