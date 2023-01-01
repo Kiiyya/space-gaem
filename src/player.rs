@@ -52,7 +52,7 @@ fn camera_look(
 	mut query: Query<(&mut Transform, &Player)>,
 ) {
 	let window = windows.get_primary().unwrap();
-	if !window.cursor_locked() {
+	if window.cursor_grab_mode() != bevy::window::CursorGrabMode::Confined {
 		return;
 	}
 
@@ -75,12 +75,12 @@ fn cursor_grab_system(
     let window = windows.get_primary_mut().unwrap();
 
     if btn.just_pressed(MouseButton::Left) {
-        window.set_cursor_lock_mode(true);
+        window.set_cursor_grab_mode(bevy::window::CursorGrabMode::Confined);
         window.set_cursor_visibility(false);
     }
 
     if key.just_pressed(KeyCode::Escape) || key.just_pressed(KeyCode::LAlt) {
-        window.set_cursor_lock_mode(false);
+        window.set_cursor_grab_mode(bevy::window::CursorGrabMode::None);
         window.set_cursor_visibility(true);
     }
 }

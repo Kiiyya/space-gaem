@@ -1,8 +1,5 @@
-#![allow(clippy::type_complexity)]
-use std::f32::consts::PI;
-
+// #![allow(clippy::type_complexity)]
 use bevy::prelude::*;
-use bevy::render::primitives::Frustum;
 use player::{PlayerPlugin, Player};
 use rand::Rng;
 
@@ -93,12 +90,12 @@ fn setup_bodies_stars(
             ..Default::default()
         });
         commands.entity(ent)
-            .insert_bundle(PbrBundle {
+            .insert(PbrBundle {
                 mesh: sphere_handle,
                 material: mat_handle,
                 ..Default::default()
             })
-            .insert_bundle(PointLightBundle {
+            .insert(PointLightBundle {
                 transform: tf.copied().unwrap_or_default(),
                 point_light: PointLight {
                     intensity: star.luminosity,
@@ -130,7 +127,7 @@ fn setup_bodies_far_stars(
             ..Default::default()
         });
         commands.entity(ent)
-            .insert_bundle(PbrBundle {
+            .insert(PbrBundle {
                 mesh: sphere_handle,
                 material: mat_handle,
                 transform: tf.copied().unwrap_or_default(),
@@ -156,7 +153,7 @@ fn setup_bodies_planets(
             ..Default::default()
         });
 
-        commands.entity(ent).insert_bundle(PbrBundle {
+        commands.entity(ent).insert(PbrBundle {
             mesh: sphere_handle,
             material: mat_handle,
             transform: tf.copied().unwrap_or_default(),
@@ -166,7 +163,7 @@ fn setup_bodies_planets(
 }
 
 fn setup(mut commands: Commands) {
-    let star1_id = commands.spawn()
+    let star1_id = commands.spawn_empty()
         .insert(Star { color: Color::rgb(1.0, 0.3, 0.0), luminosity: 100000.0, radius: 6.0 })
         .insert(Body { mass: 100.0 })
         .insert(Velocity(5.0 * Vec3::Z))
@@ -174,7 +171,7 @@ fn setup(mut commands: Commands) {
         .insert(Transform::from_xyz(-10.0, 0.0, 0.0))
         .id();
 
-    let star2_id = commands.spawn()
+    let star2_id = commands.spawn_empty()
         .insert(Star { color: Color::rgb(1.0, 0.1, 0.0), luminosity: 60000.0, radius: 4.0 })
         .insert(Body { mass: 50.0 })
         .insert(Velocity(-10.0 * Vec3::Z))
@@ -183,7 +180,7 @@ fn setup(mut commands: Commands) {
         .id();
 
     // the earth
-    let earth_id = commands.spawn()
+    let earth_id = commands.spawn_empty()
         .insert(Body { mass: 4.0 })
         .insert(Velocity(40.0 * Vec3::Z))
         .insert(Planet { color: Color::BLUE, radius: 1.5 })
@@ -192,7 +189,7 @@ fn setup(mut commands: Commands) {
         .id();
 
     // jupiter
-    let jupiter_id = commands.spawn()
+    let jupiter_id = commands.spawn_empty()
         .insert(Body { mass: 15.0 })
         .insert(Velocity(40.0 * Vec3::Z))
         .insert(Planet { color: Color::ORANGE, radius: 2.0 })
@@ -201,7 +198,7 @@ fn setup(mut commands: Commands) {
         .id();
 
     // juptiter moon
-    let jupiter_moon_id = commands.spawn()
+    let jupiter_moon_id = commands.spawn_empty()
         .insert(Body { mass: 0.3 })
         .insert(Velocity(43.0 * Vec3::Z))
         .insert(Planet {color: Color::CYAN, radius: 1.0 })
@@ -210,7 +207,7 @@ fn setup(mut commands: Commands) {
         .id();
 
     // pluto
-    let pluto_id = commands.spawn()
+    let pluto_id = commands.spawn_empty()
         .insert(Body { mass: 0.01 })
         .insert(Velocity(10.0 * Vec3::Z))
         .insert(Planet { color: Color::GRAY, radius: 1.0 })
@@ -232,34 +229,25 @@ fn setup(mut commands: Commands) {
         let distance = rng.gen_range(3000.0 .. 10000.0);
         let pos = distance * dir;
 
-        commands.spawn()
+        commands.spawn_empty()
             .insert(FarStar { color: Color::WHITE, radius: rng.gen_range(1.0 .. 4.0) })
             .insert(Transform::from_translation(pos));
     }
 
     // Player & Camera
     commands
-		.spawn_bundle(PerspectiveCameraBundle {
+		.spawn(Camera3dBundle {
 			transform: Transform::from_xyz(94.0, 0.0, 0.0).looking_at(Vec3::ZERO, Vec3::Y),
-            perspective_projection: PerspectiveProjection {
+            projection: Projection::Perspective(PerspectiveProjection {
                 far: 1000000.0,
                 ..Default::default()
-            },
+            }),
 			..Default::default()
 		})
 		.insert(Player)
         .insert(Velocity(35.0 * Vec3::Z))
         .insert(Body { mass: 0.0000001 })
 		.insert(Gravity { affectors: vec![star1_id, star2_id, earth_id, jupiter_id, jupiter_moon_id, pluto_id] });
-}
-
-fn gen_sign() -> f32 {
-    let mut rng = rand::thread_rng();
-    if rng.gen() {
-        -1.0
-    } else {
-        1.0
-    }
 }
 
 fn main() {
